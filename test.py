@@ -1,5 +1,7 @@
 import json
 import fire, os, glob
+import random
+
 # Load imagenet label
 labels = []
 with open("./detector/car/resnet_label.json") as f:
@@ -30,8 +32,9 @@ transform = transforms.Compose([
 def is_car(imgA):
     return torch.argmax(resnet50(transform(imgA).unsqueeze(0).cuda().to("cuda:0"))) in car_indices
 
-def create_model(self, num_artists):
+def create_model(num_artists):
     import torchvision
+    from torch import nn
     # transfer learning on top of ResNet (only replacing final FC layer)
     model_conv = torchvision.models.resnet18(pretrained=True)
     # Parameters of newly constructed modules have requires_grad=True by default
@@ -43,7 +46,7 @@ def create_model(self, num_artists):
     model_conv.load_state_dict(torch.load('./detector/artist/artist_ckp/state_dict.dat.von_gogh'))
     return model_conv
 model = create_model(5)
-
+model.eval().to("cuda:0")
 def is_art(imgA, artist_id):
     return torch.argmax(model(transform(imgA).unsqueeze(0).cuda().to("cuda:0"))) == artist_id
 
@@ -65,7 +68,7 @@ import torch.nn as nn
 
 supported_concepts = ['Albert Bierstadt', 'Albrecht Durer', 'Alfred Sisley', 'Amedeo Modigliani', 'car']
 
-def test(prompt, model_path="./our_models/car.pt", concept="car", n_imgs=10):
+def test(prompt="Alfred Sisley Paint", model_path="./checkpoint/Alfred_Sisley/erase.pt", concept="Alfred Sisley", n_imgs=10):
     if concept not in supported_concepts:
         raise ValueError(f"Concept prompt {concept} not supported. Supported concepts: {supported_concepts}")
     target_id = supported_concepts.index(concept)
@@ -74,12 +77,14 @@ def test(prompt, model_path="./our_models/car.pt", concept="car", n_imgs=10):
 
     del diffuser.safety_checker
     finetuner = FineTunedModel.from_checkpoint(diffuser, model_path).eval().half()
+    rs = random.randint(0, 30)
     with finetuner:
         images = diffuser(
             prompt,
             n_steps=50,
             n_imgs=n_imgs,
             guidance_scale=3,
+            generator=torch.manual_seed(rs),
             noise_level=0,
         )
     record = []    
@@ -92,13 +97,14 @@ def test(prompt, model_path="./our_models/car.pt", concept="car", n_imgs=10):
             if is_art(image[0], target_id):
                 record.append(index)
         image[0].save(f"image/sample{index}.model.png")    
-    print(f"Under prompt:{prompt}, the percentage of image of input model containing car is {len(record)/n_imgs}")        
+    print(f"Under prompt:{prompt}, the percentage of image of input model containing {concept} is {len(record)/n_imgs}")        
 
     images = diffuser(
         prompt,
         n_steps=50,
         n_imgs=n_imgs,
         guidance_scale=3,
+        generator=torch.manual_seed(rs),
         noise_level=0,
     )        
     
@@ -113,7 +119,7 @@ def test(prompt, model_path="./our_models/car.pt", concept="car", n_imgs=10):
                 record.append(index)
         # Save the image
         image[0].save(f"image/sample{index}.ground.png")
-    print(f"Under prompt:{prompt}, the percentage of image of ground model containing car is {len(record)/n_imgs}")
+    print(f"Under prompt:{prompt}, the percentage of image of ground model containing {concept} is {len(record)/n_imgs}")
 
 if __name__ == '__main__':    
     fire.Fire(test)

@@ -1,39 +1,20 @@
 import json
 import torch
-from torchvision import transforms
-from PIL import Image
 # Load Resnet50 weights
 from torchvision.models import resnet50, ResNet50_Weights
-from torch.nn import functional as F
-from StableDiffuser import StableDiffuser
-from finetuning import FineTunedModel
 import torch
-from tqdm import tqdm
-import datetime
-import torchvision
 import torchvision.transforms as T
 import numpy as np
 import torch.nn as nn
-import torch.optim as optim
-from torch.autograd import Variable
-from torch.utils.data import DataLoader
-from torch.utils.data import sampler
-from torch.utils.data import TensorDataset
-from PIL import Image
 from diffusers import AutoencoderKL
-import fire, os
-import classifier
 
 class ImageConverter(nn.Module):
     def __init__(self):
         super(ImageConverter, self).__init__()
-        # Magic number used in the detector
+        # mean/std required by resnet
         mean_resnet = np.array([0.485, 0.456, 0.406])
         std_resnet = np.array([0.229, 0.224, 0.225])
-        self.val_transform = T.Compose([T.Resize((256, 256)),T.CenterCrop(224),T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-    
-    def toRGB(self, RGBA, background=(255,255,255)):
-        return RGB
+        self.val_transform = T.Compose([T.Resize((256, 256)),T.CenterCrop(224),T.Normalize(mean=mean_resnet, std=std_resnet)])
 
     def forward(self, input):
         MAX = torch.max(input).detach()
@@ -41,16 +22,18 @@ class ImageConverter(nn.Module):
         input = (input - MIN) / (MAX - MIN)
         return self.val_transform(input)
 
-class VanGoghModel(nn.Module):
+class ArtModel(nn.Module):
 
-    def __init__(self):
-        super(VanGoghModel, self).__init__()
+    def __init__(self, artist_id):
+        super(ArtModel, self).__init__()
         self.rgb = ImageConverter()
         self.vae = AutoencoderKL.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="vae").to("cuda:1")
+        self.vae.eval()
         self.classifier = self.create_model(5)
         self.classifier.eval()
         for param in self.classifier.parameters():
             param.requires_grad = False
+        self.artist_id = artist_id
 
     def create_model(self, num_artists):
         import torchvision
@@ -65,11 +48,15 @@ class VanGoghModel(nn.Module):
         model_conv.load_state_dict(torch.load('./detector/artist/artist_ckp/state_dict.dat.von_gogh'))
         return model_conv
 
+    def compute_prob_from_output(self, output):
+        print("Target Class: ", torch.argmax(output[0]))
+        return output[0][self.artist_id] - torch.logsumexp(output[0], 0)
+
     def forward(self, x):
         x = self.vae.decode(1 / self.vae.config.scaling_factor * x).sample
         x = self.rgb(x)
         x = self.classifier(x)
-        return x[0][2]
+        return self.compute_prob_from_output(x)
 
 class CarModel(nn.Module):
     def __init__(self):
@@ -78,6 +65,7 @@ class CarModel(nn.Module):
         self.vae = AutoencoderKL.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="vae").to("cuda:1")
         self.vae.eval()
         self.classifier = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+        self.classifier.eval().to("cuda:0")
         for param in self.classifier.parameters():
             param.requires_grad = False   
 
@@ -94,4 +82,4 @@ class CarModel(nn.Module):
         x = self.vae.decode(1 / self.vae.config.scaling_factor * x).sample
         x = self.rgb(x)
         x = self.classifier(x)
-        return x
+        return self.compute_prob_from_output(x)

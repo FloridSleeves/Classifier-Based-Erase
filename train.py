@@ -32,15 +32,12 @@ class ObjectDetector():
 
 
 
-def train(concept_prompt, save_path="./checkpoint/", iterations=150, lr=0.03, nsteps = 50):
+def train(concept_prompt="Alfred Sisley", save_path="./checkpoint/", iterations=150, lr=0.03, nsteps=50):
     if concept_prompt not in supported_concepts:
         raise ValueError(f"Concept prompt {concept_prompt} not supported. Supported concepts: {supported_concepts}")
     save_path = os.path.join(save_path, concept_prompt.replace(" ", "_")) + "/"
     os.makedirs(save_path, exist_ok=True)
-    if concept_prompt == 'car':
-        modules = "unet$"
-    else:
-        modules = ".*attn2$"
+    modules = ".*attn2$"
     freeze_modules=[]
     diffuser = StableDiffuser(scheduler='DDIM').to('cuda:0')
     diffuser.train()
@@ -67,17 +64,18 @@ def train(concept_prompt, save_path="./checkpoint/", iterations=150, lr=0.03, ns
     if concept_prompt == 'car':
         gradient_scale = 70
     else:
-        gradient_scale = 20
+        gradient_scale = 40
 
     for i in pbar:
         with torch.no_grad():
             diffuser.set_scheduler_timesteps(50)
 
             optimizer.zero_grad()
-            if concept_prompt == 'car':
-                diffuse_iter = torch.randint(40, nsteps-1, (1,)).item()
-            else:
-                diffuse_iter = torch.randint(46, nsteps-1, (1,)).item()
+            diffuse_iter = torch.randint(40, nsteps-1, (1,)).item()
+            # if concept_prompt == 'car':
+            #     diffuse_iter = torch.randint(40, nsteps-1, (1,)).item()
+            # else:
+            #     diffuse_iter = torch.randint(46, nsteps-1, (1,)).item()
             latents = diffuser.get_initial_latents(1, 512, 1)
             with finetuner:
                 latents_steps, _ = diffuser.diffusion(
@@ -99,7 +97,7 @@ def train(concept_prompt, save_path="./checkpoint/", iterations=150, lr=0.03, ns
         input_x = latents_steps[0]    
         detector_grad = detector.get_input_grad(input_x)        
 
-        loss = criteria(curr_latents.float(), ref_latents.detach().float() + gradient_scale*(detector_grad)) #loss = criteria(e_n, e_0) works the best try 5000 epochs
+        loss = criteria(curr_latents.float(), ref_latents.detach().float() + gradient_scale*(detector_grad))
         loss.backward()
         optimizer.step()
 
