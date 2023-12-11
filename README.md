@@ -1,6 +1,14 @@
 # Classifier-Based-Erase
 This is the repo containing code for erasing a target visual concept from a pretrained stable diffusion model with the aid of a classifier for the target concept.
 
+Following pictures show the output from origianl SD model, SD model edited with our method, SD model edited with the state-of-the-art method.
+![comparison on concept 'von gogh' when prompting 'starry night'](https://github.com/FloridSleeves/Classifier-Based-Erase/blob/main/vg_comparison.png)
+![comparison on concept 'car' when prompting 'rush hour'](https://github.com/FloridSleeves/Classifier-Based-Erase/blob/main/car_comparison.png)
+
+Compared to the state-of-the-art methods, we have several advantages: 
+1. Erasing the concept not only from the prompt contains the concept, but also from semantic-relevant prompts (for example, 'rush hour' is relevant to concept 'car').
+2. Less inteference to original output, which only erase the concepts but pretain the rest of the image, guaranteeing a higher authenticity. 
+
 ## Erase Concept
 We currently support the following concepts: `['Albert Bierstadt', 'Albrecht Durer', 'Alfred Sisley', 'Amedeo Modigliani', 'car'].`
 To erase a certain concept, one can run the command
