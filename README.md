@@ -10,7 +10,7 @@ python train.py --prompt="Albert Bierstadt"
 ```
 One can also manipulate the hyperparameters in the erasing process
 ```
-python train.py --prompt=Albert Bierstadt" --iterations=150 --lr=0.03 --nstpes=50
+python train.py --prompt="Albert Bierstadt" --iterations=150 --lr=0.03 --nstpes=50
 ```
 * Iterations: number of fine-tuning iterations.
 * lr: learning rate of the SGD optimizer.
