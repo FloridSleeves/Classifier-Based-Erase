@@ -10,12 +10,12 @@ python train.py --concept_prompt="Albert Bierstadt"
 ```
 One can also manipulate the hyperparameters in the erasing process
 ```
-python train.py --concept_prompt="Albert Bierstadt" --iterations=100 --lr=0.03 --nstpes=50
+python train.py --concept_prompt="Albert Bierstadt" --iterations=100 --lr=0.03 --nsteps=50
 ```
 * `concept_prompt` specifies the concept to be erased. It is also used as the training prompt for erasure.
 * `iterations`: number of fine-tuning iterations.
 * `lr`: learning rate of the SGD optimizer.
-* `nstpes`: maximum number of stpes used in sampling latent variables from the diffuse model.
+* `nsteps`: maximum number of stpes used in sampling latent variables from the diffuse model.
 
 ## Test model
 To test whether the target visual concept has been erased from a model,
