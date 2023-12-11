@@ -32,7 +32,7 @@ class ObjectDetector():
 
 
 
-def train(concept_prompt="Alfred Sisley", save_path="./checkpoint/", iterations=150, lr=0.03, nsteps=50):
+def train(concept_prompt="Alfred Sisley", save_path="./checkpoint/", iterations=100, lr=0.03, nsteps=50):
     if concept_prompt not in supported_concepts:
         raise ValueError(f"Concept prompt {concept_prompt} not supported. Supported concepts: {supported_concepts}")
     save_path = os.path.join(save_path, concept_prompt.replace(" ", "_")) + "/"
